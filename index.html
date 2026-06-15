@@ -102,43 +102,6 @@
 
       </main>
 
-      <!-- Right Column: Video Preview Card (Shows dynamically) -->
-      <section id="preview-panel" class="preview-panel glass-card hidden">
-        <div class="preview-header">
-          <h3>Video Preview</h3>
-          <span id="active-video-title" class="active-title">No Video Selected</span>
-        </div>
-
-        <!-- HTML5 Video element -->
-        <div class="player-wrapper" style="position: relative;">
-          <video id="video-player" controls class="video-player"></video>
-          <div id="player-error-overlay" class="player-error-overlay hidden">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="36" height="36" style="margin-bottom: 8px;">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <span id="player-error-text" style="font-size: 11px; padding: 0 10px;">Playback Error</span>
-          </div>
-        </div>
-
-        <!-- Individual File Details & Download -->
-        <div class="player-actions">
-          <div class="video-info">
-            <span class="info-label">Size:</span>
-            <span id="video-info-size" class="info-value">-</span>
-          </div>
-          <button id="save-active-btn" class="primary-btn flex-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>Save Video</span>
-          </button>
-        </div>
-      </section>
-
     </div>
 
     <!-- Bottom Toast Notifications -->

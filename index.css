@@ -175,21 +175,14 @@ h1, h2, h3 {
 }
 
 .workspace-grid {
-  display: grid;
-  gap: 24px;
+  display: flex;
+  justify-content: center;
   width: 100%;
-  transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-  align-items: stretch;
 }
 
-.workspace-grid.single-panel {
+.converter-card {
+  width: 100%;
   max-width: 600px;
-  grid-template-columns: 1fr;
-}
-
-.workspace-grid.double-panel {
-  max-width: 1400px;
-  grid-template-columns: 1fr 1fr;
 }
 
 @media (max-width: 900px) {
@@ -555,6 +548,12 @@ body.light-theme .theme-toggle:hover {
   background: var(--accent-error);
   color: white;
   border-color: var(--accent-error);
+}
+
+.circle-btn.download-btn:hover {
+  background: var(--accent-success);
+  color: white;
+  border-color: var(--accent-success);
 }
 
 /* 8. Preview Panel Card (Right Column) */

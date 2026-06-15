@@ -4,8 +4,7 @@
 
 // 1. Application State
 const state = {
-  fileQueue: [], // Array of converted files
-  activeIndex: -1 // Selected index in queue for preview
+  fileQueue: [] // Array of converted files
 };
 
 // 2. DOM Elements
@@ -16,14 +15,6 @@ const queueCount = document.getElementById('queue-count');
 const clearQueueBtn = document.getElementById('clear-queue-btn');
 const saveAllBtn = document.getElementById('save-all-btn');
 const toastContainer = document.getElementById('toast-container');
-
-// Preview Panel elements
-const workspaceGrid = document.getElementById('workspace-grid');
-const previewPanel = document.getElementById('preview-panel');
-const videoPlayer = document.getElementById('video-player');
-const activeVideoTitle = document.getElementById('active-video-title');
-const videoInfoSize = document.getElementById('video-info-size');
-const saveActiveBtn = document.getElementById('save-active-btn');
 
 // 3. Initialization
 window.addEventListener('DOMContentLoaded', () => {
@@ -60,7 +51,6 @@ function setupEventListeners() {
       fileInput.value = ''; // Reset input to allow re-upload if deleted from queue
     }
   });
-  saveActiveBtn.addEventListener('click', downloadActiveFile);
   if (saveAllBtn) {
     saveAllBtn.addEventListener('click', downloadAllFiles);
   }
@@ -74,33 +64,6 @@ function setupEventListeners() {
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
   }
-
-  const playerErrorOverlay = document.getElementById('player-error-overlay');
-  const playerErrorText = document.getElementById('player-error-text');
-
-  videoPlayer.addEventListener('error', () => {
-    const error = videoPlayer.error;
-    let msg = "Playback failed. The video format might not be supported.";
-    if (error) {
-      if (error.code === 3) {
-        msg = "Playback failed: Decoding error. The video may be using an unsupported codec (e.g. H.265/HEVC) which your browser cannot decode natively.";
-      } else if (error.code === 4) {
-        msg = "Playback failed: Format not supported. The browser cannot open this type of video container or codec.";
-      }
-    }
-    if (playerErrorText) {
-      playerErrorText.textContent = msg;
-    }
-    if (playerErrorOverlay) {
-      playerErrorOverlay.classList.remove('hidden');
-    }
-  });
-
-  videoPlayer.addEventListener('loadstart', () => {
-    if (playerErrorOverlay) {
-      playerErrorOverlay.classList.add('hidden');
-    }
-  });
 }
 
 // Theme Handling
@@ -362,11 +325,6 @@ function handleFileSelection(files) {
       }
       renderQueue();
       updateButtonStates();
-      
-      // Auto select the first successfully loaded item to show video player
-      if (state.activeIndex === -1 && queueItem.status === 'ready') {
-        selectQueueItem(itemIndex);
-      }
     };
     
     reader.onerror = function() {
@@ -395,63 +353,6 @@ function handleFileSelection(files) {
   }
 }
 
-// 8. Video Preview Player Controller
-function selectQueueItem(index) {
-  if (index < 0 || index >= state.fileQueue.length) return;
-  
-  const item = state.fileQueue[index];
-  if (item.status !== 'ready' || !item.repairedBytes) return;
-
-  state.activeIndex = index;
-  
-  // Highlight active row in UI list
-  const cardElements = queueList.getElementsByClassName('queue-item');
-  for (let i = 0; i < cardElements.length; i++) {
-    if (i === index) {
-      cardElements[i].classList.add('active');
-    } else {
-      cardElements[i].classList.remove('active');
-    }
-  }
-
-  // Create local Object URL for video player preview
-  if (!item.objectUrl) {
-    const mp4Blob = new Blob([item.repairedBytes], { type: 'video/mp4' });
-    item.objectUrl = URL.createObjectURL(mp4Blob);
-  }
-
-  // Show player panel & expand grid layout to 2 columns
-  workspaceGrid.classList.remove('single-panel');
-  workspaceGrid.classList.add('double-panel');
-  previewPanel.classList.remove('hidden');
-
-  // Update Player Details
-  activeVideoTitle.textContent = getCleanDisplayName(item.originalName);
-  videoInfoSize.textContent = formatBytes(item.repairedBytes.length);
-
-  // If format is unknown, show warning message on player overlay
-  const playerErrorOverlay = document.getElementById('player-error-overlay');
-  const playerErrorText = document.getElementById('player-error-text');
-  if (item.format === 'unknown') {
-    if (playerErrorText) {
-      playerErrorText.textContent = "Unrecognized format: Could not find any standard video container signatures (MP4, WebM, AVI). The file might be encrypted or not a video.";
-    }
-    if (playerErrorOverlay) {
-      playerErrorOverlay.classList.remove('hidden');
-    }
-  } else {
-    if (playerErrorOverlay) {
-      playerErrorOverlay.classList.add('hidden');
-    }
-  }
-  
-  // Load Video in Player
-  videoPlayer.src = item.objectUrl;
-  videoPlayer.load();
-  videoPlayer.play().catch(e => console.log("Auto-play blocked, waiting for user interaction."));
-}
-
-// 9. Download Functions
 function downloadFile(item) {
   if (!item.repairedBytes) return;
 
@@ -471,11 +372,6 @@ function downloadFile(item) {
   }, 100);
   
   showToast(`Saving video: ${getCleanDisplayName(item.convertedName)}`, 'success');
-}
-
-function downloadActiveFile() {
-  if (state.activeIndex === -1) return;
-  downloadFile(state.fileQueue[state.activeIndex]);
 }
 
 function downloadAllFiles() {
@@ -500,13 +396,6 @@ function deleteQueueItem(index, event) {
   }
   
   state.fileQueue.splice(index, 1);
-  
-  // Handle selected index checks
-  if (state.activeIndex === index) {
-    closePreviewPanel();
-  } else if (state.activeIndex > index) {
-    state.activeIndex--;
-  }
 
   renderQueue();
   updateButtonStates();
@@ -521,21 +410,9 @@ function clearQueue() {
   });
   
   state.fileQueue = [];
-  closePreviewPanel();
   renderQueue();
   updateButtonStates();
   showToast('Queue cleared.', 'info');
-}
-
-function closePreviewPanel() {
-  state.activeIndex = -1;
-  videoPlayer.pause();
-  videoPlayer.removeAttribute('src');
-  videoPlayer.load();
-  
-  previewPanel.classList.add('hidden');
-  workspaceGrid.classList.remove('double-panel');
-  workspaceGrid.classList.add('single-panel');
 }
 
 function updateButtonStates() {
@@ -578,8 +455,12 @@ function renderQueue() {
   
   state.fileQueue.forEach((item, index) => {
     const card = document.createElement('div');
-    card.className = `queue-item ${index === state.activeIndex ? 'active' : ''}`;
-    card.addEventListener('click', () => selectQueueItem(index));
+    card.className = 'queue-item';
+    card.addEventListener('click', () => {
+      if (item.status === 'ready') {
+        downloadFile(item);
+      }
+    });
     
     let badgeText = 'READY';
     let badgeClass = 'badge-ready';
@@ -606,6 +487,13 @@ function renderQueue() {
         </div>
       </div>
       <div class="item-actions">
+        <button class="circle-btn download-btn" title="Save Video" id="dl-btn-${item.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
         <button class="circle-btn delete-btn" title="Remove" id="del-btn-${item.id}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -615,8 +503,16 @@ function renderQueue() {
       </div>
     `;
     
-    // Wire up delete event (prevent list row selection)
-    card.querySelector('.delete-btn').addEventListener('click', (e) => deleteQueueItem(index, e));
+    // Wire up events
+    card.querySelector('.download-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadFile(item);
+    });
+    
+    card.querySelector('.delete-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteQueueItem(index, e);
+    });
     
     queueList.appendChild(card);
   });
