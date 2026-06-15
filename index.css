@@ -749,3 +749,45 @@ body.light-theme .toast {
     transform: translateY(0);
   }
 }
+
+/* 11. Custom Badge States & Video Player Overlays */
+.item-details .badge.badge-processing {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--accent-blue);
+}
+
+.item-details .badge.badge-failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-error);
+}
+
+.item-details .badge.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.player-error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 7, 10, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  padding: 20px;
+  z-index: 5;
+  border-radius: 16px;
+  transition: opacity 0.3s ease;
+}
+
+body.light-theme .player-error-overlay {
+  background: rgba(248, 250, 252, 0.9);
+}
+

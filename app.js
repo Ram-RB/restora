@@ -74,6 +74,33 @@ function setupEventListeners() {
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
   }
+
+  const playerErrorOverlay = document.getElementById('player-error-overlay');
+  const playerErrorText = document.getElementById('player-error-text');
+
+  videoPlayer.addEventListener('error', () => {
+    const error = videoPlayer.error;
+    let msg = "Playback failed. The video format might not be supported.";
+    if (error) {
+      if (error.code === 3) {
+        msg = "Playback failed: Decoding error. The video may be using an unsupported codec (e.g. H.265/HEVC) which your browser cannot decode natively.";
+      } else if (error.code === 4) {
+        msg = "Playback failed: Format not supported. The browser cannot open this type of video container or codec.";
+      }
+    }
+    if (playerErrorText) {
+      playerErrorText.textContent = msg;
+    }
+    if (playerErrorOverlay) {
+      playerErrorOverlay.classList.remove('hidden');
+    }
+  });
+
+  videoPlayer.addEventListener('loadstart', () => {
+    if (playerErrorOverlay) {
+      playerErrorOverlay.classList.add('hidden');
+    }
+  });
 }
 
 // Theme Handling
@@ -172,7 +199,7 @@ async function scanSDCard() {
 // 6. Auto-Repair Logic (Scans magic bytes to automatically strip firmware headers)
 function autoRepairBytes(arrayBuffer) {
   const bytes = new Uint8Array(arrayBuffer);
-  const limit = Math.min(bytes.length, 20000); // Scan first 20KB for signatures
+  const limit = bytes.length; // Scan the entire file for signatures
   
   // 1. MP4 'ftyp' signature (66 74 79 70)
   for (let i = 0; i <= limit - 4; i++) {
@@ -181,7 +208,11 @@ function autoRepairBytes(arrayBuffer) {
       if (start > 0) {
         console.log(`Auto-detected and stripped firmware header of ${start} bytes.`);
       }
-      return bytes.slice(start);
+      return {
+        repairedBytes: bytes.slice(start),
+        strippedBytes: start,
+        format: 'mp4'
+      };
     }
   }
 
@@ -191,7 +222,11 @@ function autoRepairBytes(arrayBuffer) {
       if (i > 0) {
         console.log(`Auto-detected and stripped firmware header of ${i} bytes.`);
       }
-      return bytes.slice(i);
+      return {
+        repairedBytes: bytes.slice(i),
+        strippedBytes: i,
+        format: 'webm'
+      };
     }
   }
 
@@ -202,13 +237,71 @@ function autoRepairBytes(arrayBuffer) {
         if (i > 0) {
           console.log(`Auto-detected and stripped firmware header of ${i} bytes.`);
         }
-        return bytes.slice(i);
+        return {
+          repairedBytes: bytes.slice(i),
+          strippedBytes: i,
+          format: 'avi'
+        };
+      }
+    }
+  }
+
+  // 4. MP4 'mdat' or 'moov' fallback signature
+  for (let i = 0; i <= limit - 4; i++) {
+    if (bytes[i] === 0x6d && bytes[i+1] === 0x64 && bytes[i+2] === 0x61 && bytes[i+3] === 0x74) { // mdat
+      const start = Math.max(0, i - 4);
+      if (start > 0) {
+        console.log(`Auto-detected MP4 'mdat' at offset ${start} and stripped header.`);
+      }
+      return {
+        repairedBytes: bytes.slice(start),
+        strippedBytes: start,
+        format: 'mp4'
+      };
+    }
+    if (bytes[i] === 0x6d && bytes[i+1] === 0x6f && bytes[i+2] === 0x6f && bytes[i+3] === 0x76) { // moov
+      const start = Math.max(0, i - 4);
+      if (start > 0) {
+        console.log(`Auto-detected MP4 'moov' at offset ${start} and stripped header.`);
+      }
+      return {
+        repairedBytes: bytes.slice(start),
+        strippedBytes: start,
+        format: 'mp4'
+      };
+    }
+  }
+
+  // 5. Raw H.264 / H.265 Annex-B start code fallback (00 00 00 01 or 00 00 01)
+  for (let i = 0; i <= limit - 5; i++) {
+    if (bytes[i] === 0x00 && bytes[i+1] === 0x00 && (bytes[i+2] === 0x01 || (bytes[i+2] === 0x00 && bytes[i+3] === 0x01))) {
+      const startCodeOffset = bytes[i+2] === 0x01 ? 3 : 4;
+      const nalTypeByte = bytes[i + startCodeOffset];
+      if (
+        nalTypeByte === 0x67 || nalTypeByte === 0x27 || nalTypeByte === 0x47 || nalTypeByte === 0x07 || // H.264 SPS
+        nalTypeByte === 0x68 || nalTypeByte === 0x28 || nalTypeByte === 0x48 || // H.264 PPS
+        nalTypeByte === 0x40 || nalTypeByte === 0x42 || nalTypeByte === 0x44 || // H.265 VPS/SPS/PPS
+        nalTypeByte === 0x09 || // AUD
+        (nalTypeByte & 0x1F) === 5 // Keyframe Slice
+      ) {
+        if (i > 0) {
+          console.log(`Auto-detected raw H.264/H.265 start code and stripped ${i} bytes.`);
+        }
+        return {
+          repairedBytes: bytes.slice(i),
+          strippedBytes: i,
+          format: 'mp4' // Return as mp4 so browser attempts playback as MP4 blob
+        };
       }
     }
   }
 
   // Fallback: return original bytes unchanged
-  return bytes;
+  return {
+    repairedBytes: bytes,
+    strippedBytes: 0,
+    format: 'unknown'
+  };
 }
 
 // 7. Handle File Selection and Conversion
@@ -257,9 +350,11 @@ function handleFileSelection(files) {
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
-        const repaired = autoRepairBytes(e.target.result);
-        queueItem.repairedBytes = repaired;
-        queueItem.size = repaired.length; // Update displayed size to reflect trimmed bytes
+        const result = autoRepairBytes(e.target.result);
+        queueItem.repairedBytes = result.repairedBytes;
+        queueItem.size = result.repairedBytes.length; // Update displayed size to reflect trimmed bytes
+        queueItem.strippedBytes = result.strippedBytes;
+        queueItem.format = result.format;
         queueItem.status = 'ready';
       } catch (err) {
         queueItem.status = 'error';
@@ -333,6 +428,22 @@ function selectQueueItem(index) {
   // Update Player Details
   activeVideoTitle.textContent = getCleanDisplayName(item.originalName);
   videoInfoSize.textContent = formatBytes(item.repairedBytes.length);
+
+  // If format is unknown, show warning message on player overlay
+  const playerErrorOverlay = document.getElementById('player-error-overlay');
+  const playerErrorText = document.getElementById('player-error-text');
+  if (item.format === 'unknown') {
+    if (playerErrorText) {
+      playerErrorText.textContent = "Unrecognized format: Could not find any standard video container signatures (MP4, WebM, AVI). The file might be encrypted or not a video.";
+    }
+    if (playerErrorOverlay) {
+      playerErrorOverlay.classList.remove('hidden');
+    }
+  } else {
+    if (playerErrorOverlay) {
+      playerErrorOverlay.classList.add('hidden');
+    }
+  }
   
   // Load Video in Player
   videoPlayer.src = item.objectUrl;
@@ -471,11 +582,17 @@ function renderQueue() {
     card.addEventListener('click', () => selectQueueItem(index));
     
     let badgeText = 'READY';
+    let badgeClass = 'badge-ready';
     
     if (item.status === 'processing') {
       badgeText = 'Restoring...';
+      badgeClass = 'badge-processing';
     } else if (item.status === 'error') {
       badgeText = 'FAILED';
+      badgeClass = 'badge-failed';
+    } else if (item.format === 'unknown') {
+      badgeText = 'NO SIGNATURE';
+      badgeClass = 'badge-warning';
     }
     
     const displayName = getCleanDisplayName(item.originalName);
@@ -485,7 +602,7 @@ function renderQueue() {
         <div class="item-name" title="${displayName}">${displayName}</div>
         <div class="item-details">
           <span>${formatBytes(item.size)}</span>
-          <span class="badge">${badgeText}</span>
+          <span class="badge ${badgeClass}">${badgeText}</span>
         </div>
       </div>
       <div class="item-actions">
