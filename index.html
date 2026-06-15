@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restora | DVR Video Recovery</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Background Glow FX -->
+  <div class="glow-sphere glow-sphere-1"></div>
+  <div class="glow-sphere glow-sphere-2"></div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+    
+    <!-- Dynamic Grid Workspace -->
+    <div id="workspace-grid" class="workspace-grid single-panel">
+      
+      <!-- Left Column: Converter & Queue Card -->
+      <main class="converter-card glass-card">
+        
+        <!-- Logo & Header -->
+        <header class="card-header">
+          <div class="logo-area">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 7l-7 5 7 5V7z" />
+              <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
+            </svg>
+            <span class="logo-text">Restora</span>
+          </div>
+          <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Theme">
+            <!-- Moon Icon (Dark Theme) -->
+            <svg id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Sun Icon (Light Theme) -->
+            <svg id="theme-icon-light" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </button>
+        </header>
+
+        <!-- Main Action Zone -->
+        <div id="dropzone" class="action-zone">
+          <input type="file" id="file-input" multiple accept=".build,.BUILD" class="hidden-input">
+          <div class="zone-content">
+            <button id="scan-sd-btn" class="scan-button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>Scan Connected SD Card</span>
+            </button>
+            <span class="or-separator">or</span>
+            <p class="drag-text">Drag & drop files here</p>
+          </div>
+        </div>
+
+        <!-- Queue Section -->
+        <div class="queue-section">
+          <div class="queue-header">
+            <h3>Restored Videos (<span id="queue-count">0</span>)</h3>
+            <div class="queue-actions">
+              <button id="clear-queue-btn" class="text-btn" disabled>Clear</button>
+            </div>
+          </div>
+
+          <div id="queue-list" class="queue-list empty">
+            <!-- Empty State -->
+            <div class="queue-empty-message">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <p>Connect your SD card and scan, or drop files to restore them.</p>
+            </div>
+          </div>
+          <button id="save-all-btn" class="primary-btn flex-btn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Save All Videos</span>
+          </button>
+        </div>
+
+      </main>
+
+      <!-- Right Column: Video Preview Card (Shows dynamically) -->
+      <section id="preview-panel" class="preview-panel glass-card hidden">
+        <div class="preview-header">
+          <h3>Video Preview</h3>
+          <span id="active-video-title" class="active-title">No Video Selected</span>
+        </div>
+
+        <!-- HTML5 Video element -->
+        <div class="player-wrapper">
+          <video id="video-player" controls class="video-player"></video>
+        </div>
+
+        <!-- Individual File Details & Download -->
+        <div class="player-actions">
+          <div class="video-info">
+            <span class="info-label">Size:</span>
+            <span id="video-info-size" class="info-value">-</span>
+          </div>
+          <button id="save-active-btn" class="primary-btn flex-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Save Video</span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Bottom Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Custom Scripts -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
